@@ -4,7 +4,7 @@ import type { Language, ExpenseItem } from '../types';
 import { translations } from '../constants';
 import { generateExpensePDF } from './services/exportService';
 import { addExpenseReport } from './services/db';
-import { dispatchDataChangedEvent } from '../../services/lib/events';
+import { dispatchDataChangedEvent } from '../services/lib/events';
 
 const ExpenseCalculator: React.FC<{ language: Language }> = ({ language }) => {
     const t = translations[language];
