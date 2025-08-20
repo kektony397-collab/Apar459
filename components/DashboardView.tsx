@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Language } from '../types';
 import { translations } from '../constants';

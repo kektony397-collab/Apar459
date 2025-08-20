@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import type { Language, Admin } from '../types';

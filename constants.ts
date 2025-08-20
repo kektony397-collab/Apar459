@@ -270,6 +270,11 @@ export const translations: { [key: string]: Translation } = {
     total: "कुल",
     createReceipt: "रसीद बनाएं",
     receiptCreated: "रसीद सफलतापूर्वक बनाई गई!",
+    // PDF Header
+    pdfHeader1: "डेमो अपार्टमेंट विभाग",
+    pdfHeader2: "को.ऑप. हाउसिंग सर्विस सोसाइटी लि.",
+    pdfHeader3: "डेमो पता",
+    pdfHeader4: "REG.NO डेमो",
     // PDF Footer
     pdfFooter1: "यह केवल एक डिजिटल सॉफ्ट कॉपी है।",
     pdfFooter2: "द्वारा बनाया गया",

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { Language, ExpenseItem } from '../types';
 import { translations } from '../constants';

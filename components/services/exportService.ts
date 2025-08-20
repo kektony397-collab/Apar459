@@ -1,17 +1,25 @@
 import type { Admin, Receipt, Language, ExpenseItem } from '../../types';
 import { translations } from '../../constants';
 import { getAdmin } from './db';
+import { NotoSansGujarati } from '../../assets/NotoSansGujarati';
+import { NotoSansDevanagari } from '../../assets/NotoSansDevanagari';
+
 
 // These are globals from the CDN script
 declare const jspdf: any;
 declare const XLSX: any;
 
 const initializeDocWithFonts = (doc: any, language: Language) => {
-    // For this implementation, we rely on the PDF viewer's font substitution,
-    // as the original font asset files were not provided.
-    // A full implementation would require embedding a base64 encoded font file.
-    if (language === 'gu' || language === 'hi') {
-        doc.setFont('Helvetica'); // Fallback for Gujarati and Hindi
+    // To embed fonts, their base64 representation must be available in the imported asset files.
+    // If the asset files are empty, jsPDF will fall back to standard fonts, and characters may not render correctly.
+    if (language === 'gu') {
+        doc.addFileToVFS('NotoSansGujarati-Regular.ttf', NotoSansGujarati);
+        doc.addFont('NotoSansGujarati-Regular.ttf', 'NotoSansGujarati', 'normal');
+        doc.setFont('NotoSansGujarati');
+    } else if (language === 'hi') {
+        doc.addFileToVFS('NotoSansDevanagari-Regular.ttf', NotoSansDevanagari);
+        doc.addFont('NotoSansDevanagari-Regular.ttf', 'NotoSansDevanagari', 'normal');
+        doc.setFont('NotoSansDevanagari');
     } else {
         doc.setFont('Helvetica');
     }
