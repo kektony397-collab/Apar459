@@ -1,4 +1,4 @@
-import type { Admin, Receipt, ExpenseReport } from '../types';
+import type { Admin, Receipt, ExpenseReport } from '../../types';
 
 // These are globals from the CDN script
 declare const idb: any;
@@ -189,10 +189,13 @@ export async function addReceipt(receiptData: Omit<Receipt, 'id' | 'receiptNumbe
     };
 
     await settingsStore.put({ key: 'lastReceiptNumber', value: nextNumber });
-    await receiptStore.add(newReceipt);
+    const id = await receiptStore.add(newReceipt);
     
     await tx.done;
-    return newReceipt;
+    
+    // Fetch the full receipt with ID to return
+    const createdReceipt = await db.get(RECEIPT_STORE, id);
+    return createdReceipt;
 }
 
 export async function getReceipts(): Promise<Receipt[]> {

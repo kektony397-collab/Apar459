@@ -1,6 +1,5 @@
-
-import type { Admin, Receipt, Language, ExpenseItem } from '../types';
-import { translations } from '../constants';
+import type { Admin, Receipt, Language, ExpenseItem } from '../../types';
+import { translations } from '../../constants';
 import { getAdmin } from './db';
 
 // These are globals from the CDN script
