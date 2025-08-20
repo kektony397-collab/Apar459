@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Language } from '../types';
 import { translations } from '../constants';
-import { setupAdmin, verifyPassword, verifyPin } from '../services/db';
+import { setupAdmin, verifyPassword, verifyPin } from './services/db';
 import PinPad from './PinPad';
 
 interface LoginPageProps {

@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import type { Language, ExpenseItem } from '../types';
 import { translations } from '../constants';
-import { generateExpensePDF } from '../services/exportService';
-import { addExpenseReport } from '../services/db';
+import { generateExpensePDF } from './services/exportService';
+import { addExpenseReport } from './services/db';
 import { dispatchDataChangedEvent } from '../lib/events';
 
 const ExpenseCalculator: React.FC<{ language: Language }> = ({ language }) => {

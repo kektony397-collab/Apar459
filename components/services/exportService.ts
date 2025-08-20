@@ -1,4 +1,5 @@
-import type { Receipt, Language, ExpenseItem } from '../types';
+
+import type { Admin, Receipt, Language, ExpenseItem } from '../types';
 import { translations } from '../constants';
 import { getAdmin } from './db';
 
@@ -6,11 +7,36 @@ import { getAdmin } from './db';
 declare const jspdf: any;
 declare const XLSX: any;
 
-const addGujaratiFont = (doc: any) => {
-    // For this implementation, we rely on the PDF viewer's font substitution.
+const initializeDocWithFonts = (doc: any, language: Language) => {
+    // For this implementation, we rely on the PDF viewer's font substitution,
+    // as the original font asset files were not provided.
     // A full implementation would require embedding a base64 encoded font file.
-    doc.setFont('Helvetica'); // Fallback
+    if (language === 'gu' || language === 'hi') {
+        doc.setFont('Helvetica'); // Fallback for Gujarati and Hindi
+    } else {
+        doc.setFont('Helvetica');
+    }
 };
+
+const drawHeader = (doc: any, admin: Admin | undefined) => {
+    const headerHeight = 25;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setFillColor(245, 245, 245); // A very light grey
+    doc.rect(0, 0, pageWidth, headerHeight, 'F');
+
+    if (admin) {
+        doc.setFontSize(16);
+        doc.setFont('Helvetica', 'bold');
+        doc.setTextColor(33, 33, 33); // Dark Grey
+        doc.text(admin.societyName, pageWidth / 2, 10, { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(117, 117, 117); // Medium Grey
+        doc.text(`${admin.societyAddress} | ${admin.societyRegNo}`, pageWidth / 2, 17, { align: 'center' });
+    }
+    doc.setDrawColor(224, 224, 224); // Light grey border
+    doc.line(0, headerHeight, pageWidth, headerHeight);
+};
+
 
 export async function generateReceiptPDF(receipt: Receipt, language: Language) {
     const { jsPDF } = jspdf;
@@ -18,55 +44,68 @@ export async function generateReceiptPDF(receipt: Receipt, language: Language) {
     const admin = await getAdmin();
     const t = translations[language];
 
-    if(language === 'gu') addGujaratiFont(doc);
+    drawHeader(doc, admin);
+    initializeDocWithFonts(doc, language);
 
-    // Dynamic Header
-    if (admin) {
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text([admin.societyName, admin.societyAddress, admin.societyRegNo], doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
-    }
+    const startY = 35;
+    doc.setFontSize(18);
+    doc.setFont(doc.getFont().fontName, 'bold');
+    doc.text(t.receipts as string, 14, startY);
 
-    // Receipt Details
     const body = [
-        [t.receiptNumber, receipt.receiptNumber],
-        [t.recipientName, receipt.name],
-        [t.date, receipt.date],
-        [t.maintenancePeriod, receipt.maintenancePeriod || 'N/A'],
-        [t.amount, receipt.amount.toFixed(2)],
+        [t.receiptNumber as string, receipt.receiptNumber],
+        [t.recipientName as string, receipt.name],
+        [t.date as string, receipt.date],
+        [t.maintenancePeriod as string, receipt.maintenancePeriod || 'N/A'],
     ];
-    
+
     doc.autoTable({
-        startY: 50,
-        head: [[language === 'en' ? 'Field' : 'વિગત', language === 'en' ? 'Details' : 'માહિતી']],
+        startY: startY + 10,
         body: body,
-        theme: 'grid',
-        styles: { font: 'Helvetica' },
-        headStyles: { fontStyle: 'bold' }
+        theme: 'plain',
+        styles: { 
+            font: doc.getFont().fontName,
+            cellPadding: 3,
+            fontSize: 11
+        },
+        columnStyles: {
+            0: { fontStyle: 'bold' }
+        }
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY;
+    let finalY = (doc as any).lastAutoTable.finalY;
+    
+    // Total Amount Box
+    doc.setFontSize(14);
+    doc.setFont(doc.getFont().fontName, 'bold');
+    doc.setFillColor(245, 245, 245);
+    doc.roundedRect(14, finalY + 10, doc.internal.pageSize.getWidth() - 28, 15, 3, 3, 'F');
+    doc.text(t.amount as string, 20, finalY + 20);
+    const amountText = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(receipt.amount);
+    doc.text(amountText, doc.internal.pageSize.getWidth() - 20, finalY + 20, { align: 'right' });
 
-    // Total
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${t.total as string}: ${receipt.amount.toFixed(2)}`, 14, finalY + 20);
 
+    finalY += 40; // Adjust space for signature
+    
     // Signature
     if (admin?.signature) {
-        doc.addImage(admin.signature, 'PNG', 150, finalY + 15, 40, 20);
-        doc.text(admin.name, 150, finalY + 40);
-        doc.text(language === 'en' ? 'Authorized Signature' : 'અધિકૃત સહી', 150, finalY + 45);
+        doc.addImage(admin.signature, 'PNG', 150, finalY, 40, 20);
+        doc.setDrawColor(117, 117, 117);
+        doc.line(150, finalY + 22, 190, finalY + 22);
+        doc.setFontSize(9);
+        doc.setTextColor(117, 117, 117);
+        doc.text(admin.name, 170, finalY + 27, { align: 'center' });
+        doc.text(language === 'en' ? 'Authorized Signature' : (language === 'gu' ? 'અધિકૃત સહી' : 'अधिकृत हस्ताक्षर'), 170, finalY + 31, { align: 'center' });
     }
     
     // Footer
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(t.pdfFooter1 as string, 14, doc.internal.pageSize.getHeight() - 20);
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(9);
+    doc.setTextColor(158, 158, 158);
+    doc.text(t.pdfFooter1 as string, 14, pageHeight - 15);
     if(admin) {
-      doc.text(`${t.pdfFooter2 as string} ${admin.name}`, 14, doc.internal.pageSize.getHeight() - 15);
+      doc.text(`${t.pdfFooter2 as string} ${admin.name}`, 14, pageHeight - 10);
     }
-
 
     doc.save(`receipt_${receipt.receiptNumber}.pdf`);
 }
@@ -77,26 +116,21 @@ export async function exportAllReceiptsPDF(receipts: Receipt[], language: Langua
     const admin = await getAdmin();
     const t = translations[language];
 
-    if(language === 'gu') addGujaratiFont(doc);
-
-    if (admin) {
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text([admin.societyName, admin.societyAddress, admin.societyRegNo], doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
-    }
+    drawHeader(doc, admin);
+    initializeDocWithFonts(doc, language);
 
     const tableBody = receipts.map(r => [r.receiptNumber, r.name, r.date, r.maintenancePeriod || 'N/A', r.amount.toFixed(2)]);
     const totalAmount = receipts.reduce((sum, r) => sum + r.amount, 0);
 
     doc.autoTable({
-        startY: 50,
+        startY: 35,
         head: [[t.receiptNumber, t.recipientName, t.date, t.maintenancePeriod, t.amount]],
         body: tableBody,
         theme: 'grid',
-        styles: { font: 'Helvetica' },
-        headStyles: { fontStyle: 'bold' },
+        styles: { font: doc.getFont().fontName },
+        headStyles: { fontStyle: 'bold', fillColor: [236, 239, 241], textColor: [33, 33, 33] },
         foot: [[t.grandTotal as string, '', '', '', totalAmount.toFixed(2)]],
-        footStyles: { fontStyle: 'bold' },
+        footStyles: { fontStyle: 'bold', fillColor: [236, 239, 241], textColor: [33, 33, 33] },
     });
 
     doc.save('all_receipts.pdf');
@@ -127,32 +161,29 @@ export async function generateExpensePDF(items: ExpenseItem[], total: number, la
     const doc = new jsPDF();
     const admin = await getAdmin();
     const t = translations[language];
-    if(language === 'gu') addGujaratiFont(doc);
 
-    // Dynamic Header
-    if (admin) {
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text([admin.societyName, admin.societyAddress, admin.societyRegNo], doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' });
-    }
+    drawHeader(doc, admin);
+    initializeDocWithFonts(doc, language);
 
     doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(t.expenseReport as string, doc.internal.pageSize.getWidth() / 2, 45, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(`${t.date as string}: ${new Date().toLocaleDateString()}`, 14, 55);
+    doc.setFont(doc.getFont().fontName, 'bold');
+    doc.text(t.expenseReport as string, 14, 35);
+    doc.setFontSize(11);
+    doc.setFont(doc.getFont().fontName, 'normal');
+    doc.setTextColor(117, 117, 117);
+    doc.text(`${t.date as string}: ${new Date().toLocaleDateString()}`, 14, 42);
     
     const tableBody = items.map(item => [item.name, item.amount.toFixed(2)]);
     
     doc.autoTable({
-        startY: 60,
+        startY: 50,
         head: [[t.itemName as string, t.amount as string]],
         body: tableBody,
         theme: 'grid',
-        styles: { font: 'Helvetica' },
-        headStyles: { fontStyle: 'bold' },
+        styles: { font: doc.getFont().fontName },
+        headStyles: { fontStyle: 'bold', fillColor: [236, 239, 241], textColor: [33, 33, 33] },
         foot: [[t.grandTotal as string, total.toFixed(2)]],
-        footStyles: { fontStyle: 'bold' },
+        footStyles: { fontStyle: 'bold', fillColor: [236, 239, 241], textColor: [33, 33, 33] },
     });
 
     doc.save('expense_report.pdf');
